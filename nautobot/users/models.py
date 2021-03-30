@@ -2,8 +2,15 @@ import binascii
 import os
 
 from django.conf import settings
-from django.contrib.auth.models import AbstractUser, Group, UserManager
+from django.contrib.auth.models import (
+    AbstractUser,
+    Group as BaseGroup,
+    GroupManager,
+    UserManager,
+    Permission,
+)
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.validators import MinLengthValidator
 from django.db import models
@@ -142,10 +149,51 @@ class User(BaseModel, AbstractUser):
 # Proxy models for admin
 #
 
+class Group(BaseModel):
+    """Our group model that uses a UUID primary key."""
 
-class AdminGroup(Group):
+    name = models.CharField("name", max_length=255, unique=True)
+    _base_group = models.OneToOneField(
+        BaseGroup,
+        on_delete=models.CASCADE,
+        parent_link=True,
+        editable=False,
+    )
+
+    objects = GroupManager()
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ["name"]
+
+    def natural_key(self):
+        return (self.name,)
+    
+    def clean(self):
+        _base_group, created = BaseGroup.objects.get_or_create(name=self.name)
+        if created:
+            self._base_group = _base_group
+
+    def save(self, *args, **kwargs):
+        # Force validation to assert population of `self._base_group`
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    @property
+    def permissions(self):
+        return self._base_group.permissions
+
+    @property
+    def user_set(self):
+        return self._base_group.user_set
+
+
+
+class AdminGroup(BaseGroup):
     """
-    Proxy contrib.auth.models.Group for the admin UI
+    Proxy django.contrib.auth.models.Group for the admin UI
     """
 
     class Meta:
@@ -226,7 +274,7 @@ class ObjectPermission(BaseModel):
         ),
         related_name="object_permissions",
     )
-    groups = models.ManyToManyField(to=Group, blank=True, related_name="object_permissions")
+    groups = models.ManyToManyField(to=BaseGroup, blank=True, related_name="object_permissions")
     users = models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True, related_name="object_permissions")
     actions = JSONArrayField(
         base_field=models.CharField(max_length=30),
