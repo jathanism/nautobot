@@ -1,6 +1,6 @@
 import time
 
-from django_rq import get_queue, get_worker
+import django_rq
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
@@ -979,7 +979,11 @@ class CustomFieldChoiceTest(TestCase):
 class CustomFieldBackgroundTasks(TestCase):
     def setUp(self):
         # Clear the queue for each test
-        get_queue("custom_fields").empty()
+        django_rq.get_queue("custom_fields").empty()
+
+    def get_worker(self, queue_name="custom_fields", **kwargs):
+        worker = django_rq.get_worker(queue_name, worker_class="rq.worker.SimpleWorker", **kwargs)
+        worker.work(burst=True)
 
     def test_provision_field_task(self):
         site = Site(
@@ -997,7 +1001,7 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.content_types.set([obj_type])
 
         # Synchronously process all jobs on the queue in this process
-        get_worker("custom_fields").work(burst=True)
+        self.get_worker()
 
         site.refresh_from_db()
 
@@ -1013,7 +1017,7 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.content_types.set([obj_type])
 
         # Synchronously process all jobs on the queue in this process
-        get_worker("custom_fields").work(burst=True)
+        self.get_worker()
 
         site = Site(name="Site 1", slug="site-1", _custom_field_data={"cf1": "foo"})
         site.save()
@@ -1021,7 +1025,7 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.delete()
 
         # Synchronously process all jobs on the queue in this process
-        get_worker("custom_fields").work(burst=True)
+        self.get_worker()
 
         site.refresh_from_db()
 
@@ -1037,7 +1041,7 @@ class CustomFieldBackgroundTasks(TestCase):
         cf.content_types.set([obj_type])
 
         # Synchronously process all jobs on the queue in this process
-        get_worker("custom_fields").work(burst=True)
+        self.get_worker()
 
         choice = CustomFieldChoice(field=cf, value="Foo")
         choice.save()
@@ -1049,7 +1053,7 @@ class CustomFieldBackgroundTasks(TestCase):
         choice.save()
 
         # Synchronously process all jobs on the queue in this process
-        get_worker("custom_fields").work(burst=True)
+        self.get_worker()
 
         site.refresh_from_db()
 

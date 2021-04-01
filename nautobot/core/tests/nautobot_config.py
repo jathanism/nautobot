@@ -17,6 +17,7 @@ DATABASES = {
         "PASSWORD": os.getenv("NAUTOBOT_PASSWORD", ""),
         "HOST": os.getenv("NAUTOBOT_DB_HOST", "localhost"),
         "PORT": "",
+        "CONN_MAX_AGE": 300,
         "ENGINE": "django.db.backends.postgresql",
     }
 }
