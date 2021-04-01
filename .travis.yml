@@ -3,7 +3,7 @@ services:
   - postgresql
   - redis-server
 addons:
-  postgresql: "9.6"
+  postgresql: "10.16"
 language: python
 matrix:
   include:
