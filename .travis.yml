@@ -3,15 +3,7 @@ services:
   - postgresql
   - redis-server
 addons:
-  postgresql: "10"
-  apt:
-    packages:
-      postgresql-10
-      postgresql-client-10
-env:
-  global:
-    - PGPORT=5432
-    - NAUTOBOT_USER=postgres
+  postgresql: "9.6"
 language: python
 matrix:
   include:
