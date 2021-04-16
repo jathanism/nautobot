@@ -1,7 +1,7 @@
 import logging
 
 from django.apps import AppConfig
-from django.db.utils import ProgrammingError
+from django.db.utils import OperationalError, ProgrammingError
 
 
 logger = logging.getLogger("nautobot.extras.apps")
@@ -17,7 +17,7 @@ class ExtrasConfig(AppConfig):
         try:
             # Wrap plugin model validator registered clean methods
             wrap_model_clean_methods()
-        except ProgrammingError:
+        except (OperationalError, ProgrammingError):
             # The ContentType table might not exist yet (if migrations have not been run)
             logger.warning(
                 "Wrapping model clean methods for custom validators failed because "

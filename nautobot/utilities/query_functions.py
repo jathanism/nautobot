@@ -19,6 +19,12 @@ class CollateAsChar(Func):
             function = '"C"'
         elif "mysql" in engine:
             function = "utf8mb4_bin"
+        elif "sqlite" in engine:
+            # FIXME(jathan) Still not sure if this is right. I think this might be what is resulting in:
+            # django.db.utils.InterfaceError: Error binding parameter 0 - probably unsupported type.
+            # See: https://sentry.io/share/issue/0fa7832eb33f4bc78b6526f98a9aeb70/
+            function = ""
+            template = "(%(expressions)s)"  # noop
         else:
             raise NotSupportedError(f"CollateAsChar is not supported for database {engine}")
 
@@ -42,8 +48,10 @@ class JSONBAgg(Aggregate):
                 JSONBAgg.function = "JSONB_AGG"
             elif "mysql" in engine:
                 JSONBAgg.function = "JSON_ARRAYAGG"
+            elif "sqlite" in engine:
+                JSONBAgg.function = "json_group_array"
             else:
-                raise ConnectionError("Only Postgres and MySQL supported")
+                raise ConnectionError(f"JSON aggregation is not supported for database: {engine}")
         return super().as_sql(compiler, connection, **extra_context)
 
 

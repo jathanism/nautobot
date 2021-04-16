@@ -27,7 +27,9 @@ class PathContains(Lookup):
             sql = "%s::jsonb ? '%s'" % (lhs, rhs)
         elif "mysql" in engine:
             sql = "JSON_CONTAINS(%s, '\"%s\"','$')" % (lhs, rhs)
+        elif "sqlite" in engine:
+            sql = f"json_extract({lhs}, '$') LIKE '%%{rhs}%%' ESCAPE '\\'"
         else:
-            raise NotSupportedError("PathContains only supports PostgreSQL and MySQL")
+            raise NotSupportedError(f"PathContains not supported by {engine}")
 
         return sql, params
